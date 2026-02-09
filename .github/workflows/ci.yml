@@ -4,29 +4,55 @@ on:
   push:
     branches:
       - main
+      - master
   pull_request:
+    branches:
+      - main
+      - master
 
 jobs:
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: read
+
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+
+      - name: Cache Electron
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+
       - name: Verify build (Linux)
         if: runner.os == 'Linux'
         run: npx electron-builder --linux --dir
+
       - name: Verify build (macOS)
         if: runner.os == 'macOS'
         run: npx electron-builder --mac --dir
+
       - name: Verify build (Windows)
         if: runner.os == 'Windows'
         run: npx electron-builder --win --dir
